@@ -34,16 +34,29 @@ class BuildFeatures():
     DD = r"(0[1-9]|[12][0-9]|3[01])"
     TM = r"\s+([01][0-9]|2[0-4]):[0-5][0-9](:[0-5][0-9])?(\s+(PM|AM))?"
     patterns = {
-        "date_time": fr"^({YYYY}[-./]{MM}[-./]{DD}|{MM}[-./]{DD}[-./]{YYYY}|{DD}[-./]{YY}[-./]{YYYY})({TM})?$"
+        "date_time": fr"^({YYYY}[-./]{MM}[-./]{DD}|{MM}[-./]{DD}[-./]{YYYY}|{DD}[-./]{MM}[-./]{YYYY})({TM})?$",
+        "number": r"^(?!0\d)\d+([.]\d*)?$",
+        "integer": r"^(?!0\d)\d+$",
+        # "bunho": r"^\d+([-./]\d+)*$",
+        "bunho": r"^[A-Za-z0-9\uAC00-\uD7A3]+([-./:][A-Za-z0-9\uAC00-\uD7A3]+)*$",
+        "email": r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
+        "url": r"^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$",
+        "part_num": r"\d+",
+        "part_text": r"[A-Za-z\uAC00-\uD7A3]+",
+        "part_discriminator": r"[./-:]",
+        "part_mask": r"[#*]{3,}",
+        "part_minus": r"^-\d",
     }
     
-    def __init__(self, series:Series, patterns:dict):
+    def __init__(self, series:Series, col_name:str):
         na_rate = series.isna().mean()
         null_rate = series.str.strip().isin(['NULL']).mean()
         
         self.null_rate = na_rate + null_rate
-        self.series = series[~series.isin(['NULL'])].dropna()  
-        self.patterns = patterns
+        self.series = series[~series.isin(['NULL'])].dropna()
+        self.datatype = self.series.dtype  
+        self.col_name = col_name
+        # self.patterns = patterns
         
     def rate_matching_pattern(self,pattern:str)-> float:
         series = self.series.dropna()
@@ -55,6 +68,12 @@ class BuildFeatures():
         ratio = series.str.len().value_counts(normalize=True)
         length_purity = (ratio * ratio).sum()
         return length_purity
+    
+    def get_distinct(self):
+        # self.series.value_counts()
+        
+    def get_column_suffix(self):
+        pass
     
     def profiling_patterns(self):
         features = {}
