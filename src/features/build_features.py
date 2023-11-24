@@ -68,7 +68,7 @@ class BuildFeatures():
 
     #  도메인 접미사 패턴 그룹 정의 및 결합
     suffix_patterns = {
-        "BUNHO": "(?P<BUNHO>(NO|SN|ZIP|TKN|VIN)$)",
+        "BUNHO": "(?P<BUNHO>(NO|SN|ZIP|TKN|VIN|ENTN)$)",
         "NALJJA": "(?P<NALJJA>(DT|YMD|YM|YR|SYR|MM|DAY)$)",
         "MYEONG": "(?P<MYEONG>(NM|TTL)$)",
         "JUSO": "(?P<JUSO>(ADDR)$)",
@@ -128,9 +128,9 @@ class BuildFeatures():
         match = self.combined_pattern.search(word)
         if match:
             matched_groups = [name for name, value in match.groupdict().items() if value]
-            return matched_groups if matched_groups else "기타"
+            return matched_groups if matched_groups else "ETC"
         else:
-            return "기타"
+            return "ETC"
            
     def one_hot_encode(self, domain:str, categories: list) -> dict:
        """
@@ -168,10 +168,19 @@ data = {
         '2023-03-01', 'NULL', None, 'NaN', '2023-04-01'
     ]
 }
+
+
+data = {
+
+    'ENTN': [
+        '200905830','201785062','080146287','200100957','201810936'
+    ]
+}
+
 # 판다스 데이터프레임 생성
 df = pd.DataFrame(data)
 # BuildFeatures 클래스 인스턴스화
-bf = BuildFeatures(df['sample_column'], 'SAMPLE_sz')
+bf = BuildFeatures(df['ENTN'], 'ENTN')
 # 프로파일링 패턴 호출
 profile = bf.profiling_patterns()
 print(profile)    
