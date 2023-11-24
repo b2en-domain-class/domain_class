@@ -10,10 +10,27 @@ domain_class
 머신러닝 알고리즘을 이용하여 도메인 추정하기 때문에, 학습데이터 축적에 따른 지속적인 개선이 가능합니다.
 
 데이터프레임 형식의 컬럼에 해당하는 데이터셋의 도메인을 추정하는 알고리즘입니다.
+
+### use_case
+# data = {
+#     'sample_column': [
+#         '2023-01-01', '100', '300.5', 'test@example.com', 'http://example.com', 
+#         '2023-02-01', '200', '400.5', 'hello@world.com', 'https://world.com',
+#         '2023-03-01', 'NULL', None, 'NaN', '2023-04-01'
+#     ]
+# }
+# # 판다스 데이터프레임 생성
+# df = pd.DataFrame(data)
+# # BuildFeatures 클래스 인스턴스화
+# bf = BuildFeatures(df['sample_column'], 'SAMPLE_sz')
+# # 프로파일링 패턴 호출
+# profile = bf.profiling_patterns()
+# print(profile)    
+
 이를 위해 정규표현식을 이용한 다양한 패턴들, 데이터의 값 및 특성의 분포을 이용해 Feature를 구성하였습니다.
 
-Feature 구성을 위해 사용된 패턴 및 분포
-    """
+Feature 구성을 위해 사용된 패턴 및 분포   
+
     ## 전처리
     - None, NULL 등의 갯수/비율 체크 및 삭제
     ##전체패턴
@@ -37,7 +54,7 @@ Feature 구성을 위해 사용된 패턴 및 분포
     ##메타데이터
     - 컬럼도메인: 컬럼명으로부터 도메인 접미사 추출하여 해당도메인 onehot처리(도메인별 접미사 구성)
     - 데이터 타입
-    """
+  
     YYYY = r"(19|20)\d{2}"
     MM = r"(0[1-9]|1[012])"
     DD = r"(0[1-9]|[12][0-9]|3[01])"
@@ -56,7 +73,20 @@ Feature 구성을 위해 사용된 패턴 및 분포
         "part_mask": r"[#*]{3,}",
         "part_minus": r"^-\d",
     }
-
+    #  도메인 접미사 패턴 
+    suffix_patterns = {
+        "BUNHO": "(?P<BUNHO>(NO|SN|ZIP|TKN|VIN)$)",
+        "NALJJA": "(?P<NALJJA>(DT|YMD|YM|YR|SYR|MM|DAY)$)",
+        "MYEONG": "(?P<MYEONG>(NM|TTL)$)",
+        "JUSO": "(?P<JUSO>(ADDR)$)",
+        "YEOBU": "(?P<YEOBU>YN$)",
+        "CODE": "(?P<CODE>CD$)",
+        "ID": "(?P<ID>ID$)",
+        "SURYANG": "(?P<SURYANG>(LOT|DONT|GRD|LVL|GFA|AREA|PRG|SCR|CNT|LEN|SZ)$)",
+        "GEUMAEK": "(?P<GEUMAEK>(AMT|FEE|UNTPRC)$)",
+        "NAEYOUNG": "(?P<NAEYOUNG>CN$)",
+        "YUL": "(?P<YUL>RT$)",
+    }
 
 
 Project Organization
