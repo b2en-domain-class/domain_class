@@ -12,20 +12,23 @@ domain_class
 데이터프레임 형식의 컬럼에 해당하는 데이터셋의 도메인을 추정하는 알고리즘입니다.
 
 ### use_case
-# data = {
-#     'sample_column': [
-#         '2023-01-01', '100', '300.5', 'test@example.com', 'http://example.com', 
-#         '2023-02-01', '200', '400.5', 'hello@world.com', 'https://world.com',
-#         '2023-03-01', 'NULL', None, 'NaN', '2023-04-01'
-#     ]
-# }
-# # 판다스 데이터프레임 생성
-# df = pd.DataFrame(data)
-# # BuildFeatures 클래스 인스턴스화
-# bf = BuildFeatures(df['sample_column'], 'SAMPLE_sz')
-# # 프로파일링 패턴 호출
-# profile = bf.profiling_patterns()
-# print(profile)    
+```python
+data = {
+    'sample_column': [
+        '2023-01-01', '100', '300.5', 'test@example.com', 'http://example.com', 
+        '2023-02-01', '200', '400.5', 'hello@world.com', 'https://world.com',
+        '2023-03-01', 'NULL', None, 'NaN', '2023-04-01'
+    ]
+}
+#판다스 데이터프레임 생성   
+df = pd.DataFrame(data)   
+
+#BuildFeatures 클래스 인스턴스화   
+bf = BuildFeatures(df['sample_column'], 'SAMPLE_sz')   
+#프로파일링 패턴 호출   
+profile = bf.profiling_patterns()   
+print(profile)    
+```
 
 이를 위해 정규표현식을 이용한 다양한 패턴들, 데이터의 값 및 특성의 분포을 이용해 Feature를 구성하였습니다.
 
