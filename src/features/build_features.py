@@ -3,7 +3,8 @@ import pandas as pd
 import numpy as np
 import re
 from pandas import Series
-
+import warnings
+warnings.filterwarnings('ignore')
 
 class BuildFeatures():
     """
@@ -82,7 +83,7 @@ class BuildFeatures():
     }
     combined_pattern = re.compile("|".join(suffix_patterns.values()),  re.IGNORECASE)
     
-    def __init__(self, series:Series, col_name:str=None):
+    def __init__(self, series:Series, col_name:str=None, domain:str=None):
         if not isinstance(series, pd.Series):
             raise ValueError("series must be a pandas Series")        
         
@@ -93,6 +94,7 @@ class BuildFeatures():
         self.series = series[~series.isin(['NULL', 'NaN'])].dropna()
         self.datatype = self.series.dtype.name  
         self.col_name = col_name if col_name else self.series.name
+        self.domain = domain
 
         # self.patterns = patterns
         
@@ -147,7 +149,7 @@ class BuildFeatures():
        return one_hot_encoded.iloc[0].to_dict() 
 
     def profiling_patterns(self)-> Series:
-        features = {}
+        features = {'col_name':self.col_name}
         for key, pattern in self.patterns.items():
             features[key] = self.rate_matching_pattern(pattern)
         features['len_purity'] = self.get_length_purity()
@@ -157,32 +159,32 @@ class BuildFeatures():
         suffix_domain = self.find_suffix_domain()
         one_hot_encoded = self.one_hot_encode(suffix_domain, self.suffix_patterns.keys()) 
         features = {**features, **one_hot_encoded}
-        
-        return pd.Series(features,name = self.col_name )
+        if self.domain:
+            features['domain'] = self.domain
+        return pd.Series(features)       # return pd.Series(features,name = self.col_name )
+
     
 ### use_case
-data = {
-    'sample_column': [
-        '2023-01-01', '100', '300.5', 'test@example.com', 'http://example.com', 
-        '2023-02-01', '200', '400.5', 'hello@world.com', 'https://world.com',
-        '2023-03-01', 'NULL', None, 'NaN', '2023-04-01'
-    ]
-}
+# data = {
+#     'sample_column': [
+#         '2023-01-01', '100', '300.5', 'test@example.com', 'http://example.com', 
+#         '2023-02-01', '200', '400.5', 'hello@world.com', 'https://world.com',
+#         '2023-03-01', 'NULL', None, 'NaN', '2023-04-01'
+#     ]
+# }
 
 
-data = {
+# data = {
 
-    'ENTN': [
-        '200905830','201785062','080146287','200100957','201810936'
-    ]
-}
+#     'ENTN': [
+#         '200905830','201785062','080146287','200100957','201810936'
+#     ]
+# }
 
-# 판다스 데이터프레임 생성
-df = pd.DataFrame(data)
-# BuildFeatures 클래스 인스턴스화
-bf = BuildFeatures(df['ENTN'], 'ENTN')
-# 프로파일링 패턴 호출
-profile = bf.profiling_patterns()
-print(profile)    
-
-            
+# # 판다스 데이터프레임 생성
+# df = pd.DataFrame(data)
+# # BuildFeatures 클래스 인스턴스화
+# bf = BuildFeatures(df['ENTN'], 'ENTN')
+# # 프로파일링 패턴 호출
+# profile = bf.profiling_patterns()
+# print(profile)    
