@@ -1,96 +1,37 @@
-"""
-date_time             0.333333
-number                0.333333
-integer               0.166667
-bunho                 0.666667
-email                 0.166667
-url                   0.166667
-part_num              0.666667
-part_text             0.333333
-part_discriminator         1.0
-part_mask                  0.0
-part_minus                 0.0
-len_purity            0.194444
-value_nunique               12
-value_distr           3.584963
-datatype                object
-BUNHO                        0
-NALJJA                       0
-MYEONG                       0
-JUSO                         0
-YEOBU                        0
-CODE                         0
-ID                           0
-SURYANG                   True
-GEUMAEK                      0
-NAEYOUNG                     0
-YUL                          0
-ETC                          0
-"""
+import sys, os
+import warnings
+from dotenv import load_dotenv, find_dotenv
 
-labels = ['BUNHO', 
-          'NALJJA', 
-          'MYEONG', 
-          'JUSO', 
-          'YEOBU', 
-          'CODE', 
-          'ID', 
-          'SURYANG', 
-          'GEUMAEK', 
-          'NAEYOUNG', 
-          'YUL'
-]
-
-features = ['date_time', 'number', 'integer', 'bunho', 'email', 'url', 'part_num',
-       'part_text', 'part_discriminator', 'part_mask', 'part_minus',
-       'len_purity', 'value_nunique', 'value_distr', 'datatype', 'BUNHO',
-       'NALJJA', 'MYEONG', 'JUSO', 'YEOBU', 'CODE', 'ID', 'SURYANG', 'GEUMAEK',
-       'NAEYOUNG', 'YUL', 'ETC']
-
-# 번호에 대한 전형적인 feature value 구성
-
-import openpyxl
 import pandas as pd
-
-import sys
 import random
-
+from sklearn.model_selection import train_test_split
 from joblib import Parallel, delayed
 import dask.dataframe as dd
+import click
 
-
-import warnings
-warnings.filterwarnings('ignore')
-sys.path.append('/home/dwna/projects/domain_class')
+# Load the .env file
+load_dotenv(find_dotenv())
+package_path = os.getenv('PACKAGE_PATH')
+# package_path = '/home/dwna/projects/domain_class'
+sys.path.append(package_path)
 from src.features.build_features import BuildFeatures
 
-
-
-
-file_path = "quality_evaluation_data.xlsx"
-
-df_e = pd.read_excel(file_path, sheet_name='error_samples')
-df_n = pd.read_excel(file_path, sheet_name='normal_samples')
-
-err_columns = ['table', 'col_nm', 'domain', 'rule', 'total_cnt', 'err_cnt', 'err_rt', 'err_ext_sql',
-       'err_data']
-nor_columns = ['table', 'col_nm', 'datatype', 'rule', 'domain', 'verify_type', 'err_free_data', 'act_date',
-       'normal_data', 'others']
-df_e.columns = err_columns
-df_n.columns = nor_columns
-
-
-
-columns = ['table', 'col_nm', 'domain', 'normal_data', 'err_data', 'datatype', 'rule',  'total_cnt', 'err_cnt', 'err_rt']
-df = df_n.merge(df_e, 'left', on=['table','col_nm'],suffixes=('','_y')) 
-
-df = (df[columns]
-        [~df.normal_data.isna()]
-        .assign(normal_data = df.normal_data.astype(str).str.split(',').apply(lambda x:[] if x ==['nan'] else x), 
-                err_data = df.err_data.astype(str).str.split(',').apply(lambda x:[] if x ==['nan'] else x)
-               )
-)
-
+def load_excel_data(file_path):
+    try:
+        data = pd.read_excel(file_path)
+        return data
+    except FileNotFoundError:
+        print(f"파일을 찾을 수 없습니다: {file_path}")
+        return None
+    except pd.errors.EmptyDataError:
+        print(f"파일이 비어있습니다: {file_path}")
+        return None
+    except pd.errors.ParserError:
+        print(f"파일을 파싱하는 데 실패했습니다: {file_path}")
+        return None
+    except Exception as e:
+        print(f"데이터를 불러오는데 실패했습니다: {e}")
+        return None
 
 
 
@@ -130,7 +71,6 @@ def profile_data(df: pd.DataFrame, abnormal_rate: float, length: int)->pd.DataFr
     return pd.DataFrame(profiles)
 
 
-
 def profile_row(row, abnormal_rate, length):
     warnings.filterwarnings('ignore')
     combined = generate_combined_set(row.normal_data, row.err_data, abnormal_rate, length)
@@ -148,13 +88,38 @@ def profile_data_dask(df: pd.DataFrame, abnormal_rate: float, length: int, numbe
     # Prepare the data for parallel processing
     ddf = dd.from_pandas(df, npartitions=number_of_partitions)
     result = ddf.map_partitions(lambda partition: partition.apply(lambda row: profile_row(row,  abnormal_rate, length), axis=1)) \
-                .compute(scheduler='processes')
+                .compute(scheduler='processes').dropna()
 
     return result
 
+def to_csv_with_directory(df, file_path):
+    directory = os.path.dirname(file_path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    df.to_csv(file_path, index=False)
+
 
 # profiles = profile_data(df, abnormal_rate=0.01, length=1000)
+@click.command()
+@click.option('--source_data_path', prompt='Now enter the source data path (e.g.,/source.xlsx)',
+              default='/source.xlsx',
+              help='source data relative path',
+              show_default=True)
+@click.option('--output_data_path', prompt='Now enter the output data path for training(e.g., /1/ver_1_len_1000_rate_0.01.csv)',
+              default='/1/ver_1_len_1000_rate_0.01.csv',
+              help='training data relative path',
+              show_default=True)
+def main(source_data_path:str, output_data_path:str ):
+    df = load_excel_data(package_path + '/data/external' + source_data_path)
+    profiles_job = profile_data_joblib(df, abnormal_rate=0.01, length=1000)
+    train_df, test_df = train_test_split(profiles_job, test_size=0.1, random_state=42)
+    profile_data_path = package_path + '/data/processed/profiles'
+    to_csv_with_directory(train_df,  profile_data_path + output_data_path)
 
-# df_profiled = profile_data_dask(df, abnormal_rate=0.01, length=1000, number_of_partitions=5)
-
-# profiles_job = profile_data_joblib(df, abnormal_rate=0.01, length=1000)
+    parts = output_data_path.split('/')
+    parts.insert(2, 'test')
+    test_data_path = '/'.join(parts)
+    to_csv_with_directory(test_df,  profile_data_path + test_data_path)
+    
+if __name__ == "__main__":
+    main()

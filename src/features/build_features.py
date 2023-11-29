@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import re
 from pandas import Series
+from sklearn.preprocessing import MultiLabelBinarizer
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -54,6 +55,7 @@ class BuildFeatures():
     DD = r"(0[1-9]|[12][0-9]|3[01])"
     TM = r"\s+([01][0-9]|2[0-4]):[0-5][0-9](:[0-5][0-9])?(\s+(PM|AM))?"
     patterns = {
+        "yn": r"^\s*[10yn]\s*$",
         "date_time": fr"^({YYYY}[-./]{MM}[-./]{DD}|{MM}[-./]{DD}[-./]{YYYY}|{DD}[-./]{MM}[-./]{YYYY})({TM})?$",
         "number": r"^(?!0\d)\d+([.]\d*)?$",
         "integer": r"^(?!0\d)\d+$",
@@ -62,7 +64,7 @@ class BuildFeatures():
         "url": r"^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$",
         "part_num": r"\d+",
         "part_text": r"[A-Za-z\uAC00-\uD7A3]+",
-        "part_discriminator": r"[./-:]",
+        "part_discriminator": r"[./:-]",
         "part_mask": r"[#*]{3,}",
         "part_minus": r"^-\d",
     }
@@ -82,6 +84,7 @@ class BuildFeatures():
         "YUL": "(?P<YUL>RT$)",
     }
     combined_pattern = re.compile("|".join(suffix_patterns.values()),  re.IGNORECASE)
+    mlb = MultiLabelBinarizer(classes=list(suffix_patterns.keys())+['ETC'])
     
     def __init__(self, series:Series, col_name:str=None, domain:str=None):
         if not isinstance(series, pd.Series):
@@ -126,28 +129,29 @@ class BuildFeatures():
         word = self.col_name
         if not isinstance(word, str) or not word:
             return "유효하지 않은 입력"
-        
+        # combined_pattern = re.compile("|".join(suffix_patterns.values()),  re.IGNORECASE)
         match = self.combined_pattern.search(word)
         if match:
             matched_groups = [name for name, value in match.groupdict().items() if value]
-            return matched_groups if matched_groups else "ETC"
+            return matched_groups if matched_groups else ["ETC"]
         else:
-            return "ETC"
+            return ["ETC"]
            
-    def one_hot_encode(self, domain:str, categories: list) -> dict:
+    def multi_hot_encode(self, matched_groups:list) -> dict:
        """
-       주어진 pandas Series를 one-hot 인코딩으로 변환합니다.
-    
-       :param series: 인코딩할 pandas Series 객체
+       :param domain: 인코딩할 pandas Series 객체
        :param categories: one-hot 인코딩을 위한 카테고리 리스트
        :return: 카테고리 값을 키로 하고 one-hot 인코딩된 pd.Series를 값으로 하는 딕셔너리
        """
-       if not isinstance(categories, list):
-           categories = list(categories)
-       categories = categories +['ETC'] # categories에 들어가지 않는 것은 ETC로 추가로 분류한다.
-       one_hot_encoded = pd.get_dummies(domain, prefix='', prefix_sep='').reindex(columns=categories, fill_value=0)
-       return one_hot_encoded.iloc[0].to_dict() 
-
+    #    if not isinstance(categories, list):
+    #        categories = list(categories)
+    #    categories = categories +['ETC'] # categories에 들어가지 않는 것은 ETC로 추가로 분류한다.
+    #    one_hot_encoded = pd.get_dummies(domain, prefix='', prefix_sep='').reindex(columns=categories, fill_value=False)
+    #    mlb.fit_transform([domain])
+       multi_hot_encoded = self.mlb.fit_transform([matched_groups])[0]
+       multi_hot_dic = dict(zip(self.mlb.classes, multi_hot_encoded))
+       return multi_hot_dic
+   
     def profiling_patterns(self)-> Series:
         features = {'col_name':self.col_name}
         for key, pattern in self.patterns.items():
@@ -157,8 +161,8 @@ class BuildFeatures():
         features['value_distr'] = self.get_value_distr()
         features['datatype'] = self.datatype
         suffix_domain = self.find_suffix_domain()
-        one_hot_encoded = self.one_hot_encode(suffix_domain, self.suffix_patterns.keys()) 
-        features = {**features, **one_hot_encoded}
+        multi_hot_dic = self.multi_hot_encode(suffix_domain) 
+        features = {**features, **multi_hot_dic}
         if self.domain:
             features['domain'] = self.domain
         return pd.Series(features)       # return pd.Series(features,name = self.col_name )
