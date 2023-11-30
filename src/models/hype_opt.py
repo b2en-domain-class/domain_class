@@ -166,3 +166,9 @@ def main(model_name:str, train_data_path:str):
 if __name__ == "__main__":
     main()
       
+      
+# Best parameters for logistic_regression: {"C": 35.97694901277438, "preprocessing": "standard"}
+# Best parameters for random_forest: {"max_depth": 20, "n_estimators": 100, "preprocessing": "standard"}
+# Best parameters for svm: {"C": 3.4646160593658917, "gamma": 1.45111800508685, "preprocessing": "standard"}
+# Best parameters for lgbm: {"learning_rate": 0.0937282043841488, "max_depth": 10, "n_estimators": 50, "num_leaves": 15, "preprocessing": "standard"}
+# Best parameters for catboost: {"depth": 10, "iterations": 100, "learning_rate": 0.29681845674147794, "preprocessing": "minmax"}

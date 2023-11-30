@@ -2,6 +2,7 @@ import os
 import sys
 import click
 import json
+import tempfile
 from dotenv import load_dotenv, find_dotenv
 
 # Load the .env file
@@ -21,7 +22,7 @@ from src.features.build_features import BuildFeatures
 
 import numpy as np
 from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, classification_report
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, OrdinalEncoder
 from sklearn.compose import ColumnTransformer
@@ -113,6 +114,28 @@ def show_params(ctx, param, value):
     else:
         raise click.BadParameter(f"Invalid model name: {value}. Available models: {list(model_spaces.keys())}")
     return value
+
+def log_dict_as_artifact(results_dict, artifact_path='model_metrics'):
+    """
+    Logs a dictionary as a JSON artifact named 'report.json' to the current MLflow run, then deletes the file.
+
+    Parameters:
+    - results_dict (dict): The dictionary to log.
+    - artifact_path (str): The artifact directory in the MLflow run to store the artifact.
+    """
+    # Define the report file name
+    report_filename = 'metrics_report.json'
+    
+    # Serialize and save the dictionary as JSON
+    with open(report_filename, 'w') as report_file:
+        json.dump(results_dict, report_file, indent=4)
+    
+    # Log the report file as an artifact
+    mlflow.log_artifact(report_filename, artifact_path)
+    
+    # Delete the report file
+    os.remove(report_filename)
+
 
 @click.command()
 @click.option('--model_name', prompt='Enter the model name (e.g., logistic_regression, random_forest, svm, lgbm, catboost)',
@@ -209,8 +232,11 @@ def main(model_name:str, params:str, train_data_path:str):
         accuracy = accuracy_score(y_test, y_pred)
         print(model_params)
         print(f'{model_name} Test Accuracy: {accuracy:.2f}')
-            
         mlflow.log_metric("Test_Accuracy", accuracy)
+        
+        class_report = classification_report(y_test, y_pred, output_dict=True)   
+        log_dict_as_artifact(class_report, "model_metrics")
+        
         
         # # Cross-validation
         # cv_scores = cross_val_score(pipeline, X, y, cv=5)
@@ -221,7 +247,8 @@ def main(model_name:str, params:str, train_data_path:str):
         # mlflow.log_metric("cv_accuracy_std", np.std(cv_scores))
 
         # Log the pipeline
-        mlflow.sklearn.log_model(pipeline, "model")
+        mlflow.sklearn.log_model(pipeline, "model") 
+        mlflow.set_tag("model", model_name)
         
 if __name__ == "__main__":
     main()
