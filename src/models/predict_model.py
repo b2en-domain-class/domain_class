@@ -37,37 +37,71 @@ from mlflow.tracking import MlflowClient
 
 
 
-# Set your MLflow tracking URI and experiment name
-mlflow.set_tracking_uri(f"file://{package_path}/models")
-mlflow.set_experiment("hyperParemeterOpted")
 
-client = MlflowClient()
+def load_best_model(experiment_name: str, metric: str = "metrics.Test_Accuracy"):
+    """
+    주어진 실험 이름과 메트릭을 사용하여 MLflow에서 최적의 모델을 로드합니다.
 
-# Get the experiment ID using the experiment name
-experiment = client.get_experiment_by_name("hyperParemeterOpted")
-if experiment:
-    experiment_id = experiment.experiment_id
+    :param experiment_name: 실험 이름.
+    :param metric: 최적 모델을 선택하기 위한 메트릭 이름.
+    :return: 최적의 모델 또는 실험이 없거나 실행을 찾지 못한 경우 None.
+    """
+    mlflow.set_tracking_uri(f"file://{package_path}/models")
+    mlflow.set_experiment(experiment_name)
+    
+    client = MlflowClient()
+    experiment = client.get_experiment_by_name(experiment_name)
+    
+    if experiment:
+        experiment_id = experiment.experiment_id
+        runs = client.search_runs(experiment_id, order_by=[f"{metric} DESC"])
+    
+        if runs:
+            best_run = runs[0]
+            best_run_id = best_run.info.run_id
+            
+            # 메트릭 이름에서 "metrics." 제거
+            metric_name = metric.split('.')[-1]
+            best_metric_value = best_run.data.metrics.get(metric_name)
 
-    # Define a search filter using the SQL-like syntax
-    filter_string = "metrics.rmse < 1.0"  # Modify this to your metric condition
+            if best_metric_value is not None:
+                print(f"Best run ID: {best_run_id} with {metric_name}: {best_metric_value}")
 
-    # Search the runs in the specified experiment and order by the metric descending
-    runs = client.search_runs(experiment_id, filter_string, order_by=["metrics.rmse DESC"])
-
-    # Assuming you want the run with the highest metric value
-    if runs:
-        best_run = runs[0]
-        best_run_id = best_run.info.run_id
-        best_metric_value = best_run.data.metrics['rmse']
-
-        print(f"Best run ID: {best_run_id} with RMSE: {best_metric_value}")
-
-        # Construct the model URI
-        model_uri = f"runs:/{best_run_id}/model"
-        # Load the model
-        model = mlflow.pyfunc.load_model(model_uri)
-        # Now you can use the model for inference or further evaluation
+                model_uri = f"runs:/{best_run_id}/model"
+                return mlflow.pyfunc.load_model(model_uri)
+            else:
+                print(f"Metric '{metric_name}' not found in the best run.")
+        else:
+            print("No runs found for the given search criteria.")
     else:
-        print("No runs found for the given search criteria.")
-else:
-    print("Experiment not found.")
+        print("Experiment not found.")
+
+    return None
+
+def estimate_domain(model, series: pd.Series, col_name: str = None):
+    """
+    주어진 series로부터 특징을 추출하고, 이를 사용하여 모델을 통해 예측값을 계산합니다.
+    
+    :param model: 예측을 수행할 모델 객체.
+    :param series: 특징을 추출할 pd.Series, 리스트 또는 튜플.
+    :param col_name: 컬럼 이름 (옵션).
+    :return: 모델에 의해 예측된 결과.
+    """
+    
+    if isinstance(series, (list, tuple)):
+        series = pd.Series(series)
+    elif not isinstance(series, pd.Series):
+        raise TypeError("series must be a pandas Series, list, or tuple")
+
+    # BuildFeatures를 사용하여 profiling patterns 실행
+    profile = BuildFeatures(series, col_name).profiling_patterns()
+    
+    # 'col_name', 'datatype', 'domain' 인덱스 제거
+    features = profile.drop(index=['col_name', 'datatype', 'domain'])
+
+    # 모델의 predict 메서드 유효성 확인
+    if not hasattr(model, 'predict'):
+        raise AttributeError("Provided model does not have a predict method")
+
+    return model.predict(features)
+

@@ -122,13 +122,11 @@ Project Organization
         │   └── build_features.py
         │
         ├── models         <- Scripts to hyperoptimize the parameters of models, train models and then use trained  
-        │   │                 models to make  predictions
-        │   ├── predict_model.py
-        │   ├── train_model.py
-        │   └── hype_opt.py
-        │
-        └── visualization  <- Scripts to create exploratory and results oriented visualizations
-            └── visualize.py
+            │                 models to make  predictions
+            ├── predict_model.py
+            ├── train_model.py
+            └── hype_opt.py
+
      
     
 
