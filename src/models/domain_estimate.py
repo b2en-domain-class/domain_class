@@ -65,7 +65,7 @@ def load_best_model(experiment_name: str, metric: str = "metrics.Test_Accuracy")
             best_metric_value = best_run.data.metrics.get(metric_name)
 
             if best_metric_value is not None:
-                print(f"Best run ID: {best_run_id} with {metric_name}: {best_metric_value}")
+                # print(f"Best run ID: {best_run_id} with {metric_name}: {best_metric_value}")
 
                 model_uri = f"runs:/{best_run_id}/model"
                 return mlflow.pyfunc.load_model(model_uri)
@@ -97,11 +97,33 @@ def estimate_domain(model, series: pd.Series, col_name: str = None):
     profile = BuildFeatures(series, col_name).profiling_patterns()
     
     # 'col_name', 'datatype', 'domain' 인덱스 제거
-    features = profile.drop(index=['col_name', 'datatype', 'domain'])
-
+    indices_to_drop = ['col_name', 'datatype', 'domain']
+    indices_to_drop = [index for index in indices_to_drop if index in profile.index]
+    
+    # Drop the indices if they exist
+    features = profile.drop(index=indices_to_drop) if indices_to_drop else profile
+    # pd.Dataframe 형태로 변환
+    features = features.to_frame().transpose()
     # 모델의 predict 메서드 유효성 확인
     if not hasattr(model, 'predict'):
         raise AttributeError("Provided model does not have a predict method")
 
     return model.predict(features)
 
+
+if __name__ is '__main__':
+        
+    # 가상 컬럼 데이터 생성
+    from src.data.make_trainingdataset import generate_combined_set
+    col_data = generate_combined_set(normal_list=['abc','efaa','ddga'], 
+                                     abnormal_list=['abc','1ab'], 
+                                     abnormal_probability=0.001, 
+                                     length=1000)
+    col_name = 'test_nm'
+    series = pd.Series(col_data, name = col_name)
+    
+    # 모델 로드
+    model = load_best_model('hyperParemeterOpted')
+    # 컬럼 도메인 추정
+    print(estimate_domain(model, series))
+    
