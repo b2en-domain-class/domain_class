@@ -17,7 +17,6 @@ from openpyxl import load_workbook
 import warnings
 # warnings.filterwarnings('ignore')
 
-from src.features.build_features import BuildFeatures
 
 import numpy as np
 from sklearn.model_selection import train_test_split, cross_val_score
@@ -35,6 +34,8 @@ import mlflow
 import mlflow.sklearn
 from mlflow.tracking import MlflowClient
 
+from src.features.build_features import BuildFeatures
+from src.models.train_model import load_data
 
 
 
@@ -78,7 +79,9 @@ def load_best_model(experiment_name: str, metric: str = "metrics.Test_Accuracy")
 
     return None
 
-def estimate_domain(model, series: pd.Series, col_name: str = None):
+
+
+def estimate_domain(model, data_file_path:str):
     """
     주어진 series로부터 특징을 추출하고, 이를 사용하여 모델을 통해 예측값을 계산합니다.
     
@@ -88,42 +91,52 @@ def estimate_domain(model, series: pd.Series, col_name: str = None):
     :return: 모델에 의해 예측된 결과.
     """
     
-    if isinstance(series, (list, tuple)):
-        series = pd.Series(series)
-    elif not isinstance(series, pd.Series):
-        raise TypeError("series must be a pandas Series, list, or tuple")
-
+    # load data
+    df = load_data(data_file_path)
     # BuildFeatures를 사용하여 profiling patterns 실행
-    profile = BuildFeatures(series, col_name).profiling_patterns()
+    profiles =  pd.DataFrame([BuildFeatures(df[col]).profiling_patterns() for col in df])
     
-    # 'col_name', 'datatype', 'domain' 인덱스 제거
-    indices_to_drop = ['col_name', 'datatype', 'domain']
-    indices_to_drop = [index for index in indices_to_drop if index in profile.index]
+   
+    # 'col_name', 'datatype', 'domain' 컬럼 제거
+    cols_to_drop = ['col_name', 'datatype', 'domain']
+    cols_to_drop = [col for col in cols_to_drop if col in profiles.columns]
     
-    # Drop the indices if they exist
-    features = profile.drop(index=indices_to_drop) if indices_to_drop else profile
-    # pd.Dataframe 형태로 변환
-    features = features.to_frame().transpose()
+    features = profiles.drop(columns=cols_to_drop) if cols_to_drop else profiles
+
     # 모델의 predict 메서드 유효성 확인
     if not hasattr(model, 'predict'):
         raise AttributeError("Provided model does not have a predict method")
+    result = model.predict(features)
+    result = pd.DataFrame(result, index=df.columns, columns=['domain'])
+    
+    return result
 
-    return model.predict(features)
+def main(experiment_nm, data_path):
+    model = load_best_model(experiment_nm)
+    result = estimate_domain(model, data_path)
+    result.to_csv('result_of_domain_estimation_'+ data_path, index=False)
+    print(result.head())
+    return None
 
 
 if __name__ is '__main__':
+    main()
         
-    # 가상 컬럼 데이터 생성
-    from src.data.make_trainingdataset import generate_combined_set
-    col_data = generate_combined_set(normal_list=['abc','efaa','ddga'], 
-                                     abnormal_list=['abc','1ab'], 
-                                     abnormal_probability=0.001, 
-                                     length=1000)
-    col_name = 'test_nm'
-    series = pd.Series(col_data, name = col_name)
-    
-    # 모델 로드
-    model = load_best_model('hyperParemeterOpted')
-    # 컬럼 도메인 추정
-    print(estimate_domain(model, series))
+    # # 가상 컬럼 데이터 생성
+    # from src.data.make_trainingdataset import generate_combined_set
+    # data = []
+    # for col in ['aaa', 'bbb', 'ccc']:
+    #     col_data = generate_combined_set(normal_list=['abc','efaa','ddga'], 
+    #                                      abnormal_list=['abc','1ab'], 
+    #                                      abnormal_probability=0.001, 
+    #                                      length=1000)
+    #     col_name = col
+    #     series = pd.Series(col_data, name = col_name)
+    #     data.append(series)
+    # df = pd.concat(data, axis=1)
+    # df.to_csv('test.csv', index=False)
+    # # 모델 로드
+    # model = load_best_model('hyperParemeterOpted')
+    # # 컬럼 도메인 추정
+    # print(estimate_domain(model, 'test.csv'))
     
