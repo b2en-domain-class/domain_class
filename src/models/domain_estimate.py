@@ -149,13 +149,21 @@ def estimate_domain(model, data_file_path:str):
     return result
 
 
+def prompt_model_or_experiment():
+    if click.confirm('Do you want to load a registered model?', default=True):
+        return click.prompt('Enter the registered model name', default=None), None
+    else:
+        return None, click.prompt('Enter the experiment name', default=None)
 
 @click.command()
-@click.option('--model_name', default=None, help='Name of the model to load.')
-@click.option('--experiment_name', default=None, help='Name of the experiment to load model from.')
-@click.option('--stage', default='Production', help='Model stage for loading. Default is "Production".')
-@click.option('--data_path', default=None, help='Path to the data file for domain estimation.')
+@click.option('--model_name', default=None, hidden=True)
+@click.option('--experiment_name', default=None, hidden=True)
+@click.option('--stage', prompt='If registered model, enter the stage (Staging, Production, Archived)', default='Production', help='Model stage for loading. Default is "Production".')
+@click.option('--data_path', prompt='Now enter the CSV filepath', default=None, help='Path to the data file for domain estimation.')
 def main(model_name, experiment_name, stage, data_path):
+    if not model_name and not experiment_name:
+        model_name, experiment_name = prompt_model_or_experiment()
+
     # model = load_best_model(experiment_nm)
     model = ModelLoader(model_name, experiment_name, stage)
     model.load_model()
@@ -163,6 +171,7 @@ def main(model_name, experiment_name, stage, data_path):
     result.to_csv('result_of_domain_estimation_'+ data_path, index=False)
     print(result.head())
     return None
+
 
 
 if __name__ == '__main__':
