@@ -30,7 +30,7 @@
    python -m train_model model_name params train_data_path
 5. **모델 적용**:
    ```bash
-   python -m domain_estimate model col_nm col_data
+   python -m domain_estimate model file.csv
 
 
 ## 결과 및 시각화
@@ -77,7 +77,7 @@ Project Organization
         │
         ├── models         <- Scripts to hyperoptimize the parameters of models, train models and then use trained  
             │                 models to make  predictions
-            ├── predict_model.py
+            ├── domain_estimate.py
             ├── train_model.py
             └── hype_opt.py
 
