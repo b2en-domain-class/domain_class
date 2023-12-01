@@ -18,7 +18,6 @@
 1. **MLflow 추적 서버 설정**: 
    ```bash
    mlflow server --backend-store-uri sqlite:////var/mlflow/mlflow.db --default-artifact-root /path/to/artifacts --host 0.0.0.0 --port 5000
-   ## Generate Training Data
 2. **훈련데이터 생성**:
    ```bash
    python -m make_trainingdataset --source_data_path '/source.xlsx' --ouptput_data_path '/1/train.csv'
@@ -77,7 +76,7 @@ Project Organization
         │
         ├── models         <- Scripts to hyperoptimize the parameters of models, train models and then use trained  
             │                 models to make  predictions
-            ├── domain_estimate.py
+            ├── domain_estimate.py 
             ├── train_model.py
             └── hype_opt.py
 
