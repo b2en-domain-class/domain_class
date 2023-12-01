@@ -32,10 +32,46 @@ from catboost import CatBoostClassifier
 
 import mlflow
 import mlflow.sklearn
+import mlflow.pyfunc
 from mlflow.tracking import MlflowClient
+
 
 from src.features.build_features import BuildFeatures
 from src.models.train_model import load_data
+
+
+class ModelLoader:
+    def __init__(self, model_name=None, experiment_name=None, stage='Production'):
+        self.model_name = model_name
+        self.experiment_name = experiment_name
+        self.model = None
+        self.stage = stage
+
+    def load_model(self):
+        """MLflow에서 모델을 불러옵니다. model_name 또는 experiment_name을 기반으로 합니다."""
+        if self.model_name:
+            model_uri = f"models:/{self.model_name}/{self.stage}"
+            self.model = mlflow.pyfunc.load_model(model_uri)
+        elif self.experiment_name:
+            # experiment_name을 사용하여 모델 로드하는 로직 구현
+            # 예를 들어, experiment_id를 찾고, 해당 experiment의 최신 run에서 모델을 로드할 수 있습니다.
+            experiment = mlflow.get_experiment_by_name(self.experiment_name)
+            if experiment:
+                runs = mlflow.search_runs([experiment.experiment_id])
+                latest_run_id = runs.iloc[0]['run_id']
+                model_uri = f"runs:/{latest_run_id}/model"
+                self.model = mlflow.pyfunc.load_model(model_uri)
+            else:
+                raise ValueError(f"No experiment found with name '{self.experiment_name}'")
+        else:
+            raise ValueError("Model name or experiment name must be provided")
+
+    def predict(self, data):
+        """데이터에 대한 예측을 수행합니다."""
+        if self.model is not None:
+            return self.model.predict(data)
+        else:
+            raise Exception("Model is not loaded. Call load_model() first.")
 
 
 
@@ -81,6 +117,7 @@ def load_best_model(experiment_name: str, metric: str = "metrics.Test_Accuracy")
 
 
 
+
 def estimate_domain(model, data_file_path:str):
     """
     주어진 series로부터 특징을 추출하고, 이를 사용하여 모델을 통해 예측값을 계산합니다.
@@ -111,15 +148,24 @@ def estimate_domain(model, data_file_path:str):
     
     return result
 
-def main(experiment_nm, data_path):
-    model = load_best_model(experiment_nm)
+
+
+@click.command()
+@click.option('--model_name', default=None, help='Name of the model to load.')
+@click.option('--experiment_name', default=None, help='Name of the experiment to load model from.')
+@click.option('--stage', default='Production', help='Model stage for loading. Default is "Production".')
+@click.option('--data_path', default=None, help='Path to the data file for domain estimation.')
+def main(model_name, experiment_name, stage, data_path):
+    # model = load_best_model(experiment_nm)
+    model = ModelLoader(model_name, experiment_name, stage)
+    model.load_model()
     result = estimate_domain(model, data_path)
     result.to_csv('result_of_domain_estimation_'+ data_path, index=False)
     print(result.head())
     return None
 
 
-if __name__ is '__main__':
+if __name__ == '__main__':
     main()
         
     # # 가상 컬럼 데이터 생성
@@ -140,3 +186,15 @@ if __name__ is '__main__':
     # # 컬럼 도메인 추정
     # print(estimate_domain(model, 'test.csv'))
     
+    
+#     # 모델 로더 객체 생성 및 모델 불러오기
+#     loader = ModelLoader(model_name)
+#     loader.load_model()
+
+#     # 예측을 위한 샘플 데이터
+#     # 실제 사용시에는 모델에 맞는 데이터 형식을 사용해야 합니다.
+#     sample_data = [...]  # 샘플 데이터 입력
+
+#     # 예측 수행
+#     predictions = loader.predict(sample_data)
+#     print(predictions)
