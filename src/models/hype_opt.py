@@ -28,6 +28,7 @@ from catboost import CatBoostClassifier
 
 from hyperopt import hp, fmin, tpe, STATUS_OK, Trials, space_eval
 
+from src.util.files import load_csv
 
 # Extend the model_spaces dictionary with hyperparameter spaces for SVM, LightGBM, and CatBoost
 model_spaces = {
@@ -79,24 +80,24 @@ def create_model(model_name, params):
 #         return MinMaxScaler()
 
 
-def load_data(file_path):
-    file_path = package_path + file_path 
+# def load_csv(file_path):
+#     file_path = package_path + file_path 
 
-    try:
-        data = pd.read_csv(file_path)
-        return data
-    except FileNotFoundError:
-        print(f"파일을 찾을 수 없습니다: {file_path}")
-        return None
-    except pd.errors.EmptyDataError:
-        print(f"파일이 비어있습니다: {file_path}")
-        return None
-    except pd.errors.ParserError:
-        print(f"파일을 파싱하는 데 실패했습니다: {file_path}")
-        return None
-    except Exception as e:
-        print(f"데이터를 불러오는데 실패했습니다: {e}")
-        return None
+#     try:
+#         data = pd.read_csv(file_path)
+#         return data
+#     except FileNotFoundError:
+#         print(f"파일을 찾을 수 없습니다: {file_path}")
+#         return None
+#     except pd.errors.EmptyDataError:
+#         print(f"파일이 비어있습니다: {file_path}")
+#         return None
+#     except pd.errors.ParserError:
+#         print(f"파일을 파싱하는 데 실패했습니다: {file_path}")
+#         return None
+#     except Exception as e:
+#         print(f"데이터를 불러오는데 실패했습니다: {e}")
+#         return None
     
 
 @click.command()
@@ -108,7 +109,7 @@ def load_data(file_path):
               show_default=True)
 def main(model_name:str, train_data_path:str):
     # Load data
-    data = load_data(train_data_path)
+    data = load_csv(train_data_path)
     data = data.dropna()
     # Split data into features and target
     X = data.drop(columns=['col_name', 'datatype', 'domain' ])

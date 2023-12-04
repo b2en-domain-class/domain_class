@@ -1,7 +1,6 @@
 import os
 import sys
 import click
-import json
 from dotenv import load_dotenv, find_dotenv
 
 # Load the .env file
@@ -13,12 +12,12 @@ sys.path.append(package_path)
 
 
 import pandas as pd
-from openpyxl import load_workbook
+from joblib import Parallel, delayed
+
 import warnings
 # warnings.filterwarnings('ignore')
 
 
-import numpy as np
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.pipeline import Pipeline
@@ -30,6 +29,7 @@ from sklearn.svm import SVC
 from lightgbm import LGBMClassifier
 from catboost import CatBoostClassifier
 
+
 import mlflow
 import mlflow.sklearn
 import mlflow.pyfunc
@@ -37,7 +37,11 @@ from mlflow.tracking import MlflowClient
 
 
 from src.features.build_features import BuildFeatures
-from src.models.train_model import load_data
+from src.util.files import load_csv, write_csv
+
+
+# Initialize MLflow tracking
+mlflow.set_tracking_uri(f"http://localhost:5000")  
 
 
 class ModelLoader:
@@ -116,6 +120,18 @@ def load_best_model(experiment_name: str, metric: str = "metrics.Test_Accuracy")
     return None
 
 
+def prepare_row(row):
+    warnings.filterwarnings('ignore')
+    col_values = eval(row.col_values) if isinstance(row.col_values, str) else row.col_values
+    series = pd.Series(col_values, name=row.col_nm)
+    profile = BuildFeatures(series, domain=row.domain).profiling_patterns()
+    return profile
+
+def prepare_data_joblib(df: pd.DataFrame, num_cores:int=-1) -> pd.DataFrame:
+    # Prepare the data for parallel processing
+    results = Parallel(n_jobs=num_cores)(delayed(prepare_row)(row) 
+                                  for row in df.itertuples(index=False))
+    return pd.DataFrame(results)
 
 
 def estimate_domain(model, data_file_path:str):
@@ -129,11 +145,22 @@ def estimate_domain(model, data_file_path:str):
     """
     
     # load data
-    df = load_data(data_file_path)
-    # BuildFeatures를 사용하여 profiling patterns 실행
-    profiles =  pd.DataFrame([BuildFeatures(df[col]).profiling_patterns() for col in df])
+    # data_file_path = '/data/processed/table/pqt/0.parquet'
+    data_file_path = package_path + data_file_path
     
-   
+    # 입력 파일 확장자에 따라 적절한 읽기 방법 선택
+    file_extension = os.path.splitext(data_file_path)[-1]
+    if file_extension == '.parquet':
+        df = pd.read_parquet(os.path.join(package_path, data_file_path))
+    elif file_extension == '.csv':
+        df = pd.read_csv(os.path.join(package_path, data_file_path))
+    else:
+        raise ValueError("Unsupported file format")
+    
+        
+    # BuildFeatures를 사용하여 profiling patterns 실행
+    profiles = prepare_data_joblib(df)
+    
     # 'col_name', 'datatype', 'domain' 컬럼 제거
     cols_to_drop = ['col_name', 'datatype', 'domain']
     cols_to_drop = [col for col in cols_to_drop if col in profiles.columns]
@@ -144,9 +171,13 @@ def estimate_domain(model, data_file_path:str):
     if not hasattr(model, 'predict'):
         raise AttributeError("Provided model does not have a predict method")
     result = model.predict(features)
-    result = pd.DataFrame(result, index=df.columns, columns=['domain'])
+    result = pd.DataFrame(result, columns=['domain'])
     
     return result
+
+
+
+
 
 
 def prompt_model_or_experiment():
@@ -159,8 +190,9 @@ def prompt_model_or_experiment():
 @click.option('--model_name', default=None, hidden=True)
 @click.option('--experiment_name', default=None, hidden=True)
 @click.option('--stage', prompt='If registered model, enter the stage (Staging, Production, Archived)', default='Production', help='Model stage for loading. Default is "Production".')
-@click.option('--data_path', prompt='Now enter the CSV filepath', default=None, help='Path to the data file for domain estimation.')
+@click.option('--data_path', prompt='Now enter the parquet filepath', default='/data/processed/table/pqt/0.parquet', help='Path to the data file for domain estimation.')
 def main(model_name, experiment_name, stage, data_path):
+    
     if not model_name and not experiment_name:
         model_name, experiment_name = prompt_model_or_experiment()
 
@@ -168,14 +200,25 @@ def main(model_name, experiment_name, stage, data_path):
     model = ModelLoader(model_name, experiment_name, stage)
     model.load_model()
     result = estimate_domain(model, data_path)
-    result.to_csv('result_of_domain_estimation_'+ data_path, index=False)
+    
+    data_path = package_path + data_path
+    directory, filename = os.path.split(data_path)
+    file_basename, file_extension = os.path.splitext(filename)
+    output_file = os.path.join(directory, f'{file_basename}_result.csv')
+    result.to_csv(output_file, index=False)
+    # write_csv(result,  'result_of_domain_estimation_'+ data_path[:-3] )
     print(result.head())
     return None
 
 
 
+
 if __name__ == '__main__':
     main()
+        
+        
+        
+        
         
     # # 가상 컬럼 데이터 생성
     # from src.data.make_trainingdataset import generate_combined_set

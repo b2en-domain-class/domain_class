@@ -15,27 +15,28 @@ package_path = os.getenv('PACKAGE_PATH')
 # package_path = '/home/dwna/projects/domain_class'
 sys.path.append(package_path)
 from src.features.build_features import BuildFeatures
+from src.util.files import load_excel
 
-def load_excel_data(file_path):
-    """
-    :param file_path: relative path from package path
-    """
-    file_path = package_path + file_path
-    try:
-        data = pd.read_excel(file_path)
-        return data
-    except FileNotFoundError:
-        print(f"파일을 찾을 수 없습니다: {file_path}")
-        return None
-    except pd.errors.EmptyDataError:
-        print(f"파일이 비어있습니다: {file_path}")
-        return None
-    except pd.errors.ParserError:
-        print(f"파일을 파싱하는 데 실패했습니다: {file_path}")
-        return None
-    except Exception as e:
-        print(f"데이터를 불러오는데 실패했습니다: {e}")
-        return None
+# def load_excel(file_path):
+#     """
+#     :param file_path: relative path from package path
+#     """
+#     file_path = package_path + file_path
+#     try:
+#         data = pd.read_excel(file_path)
+#         return data
+#     except FileNotFoundError:
+#         print(f"파일을 찾을 수 없습니다: {file_path}")
+#         return None
+#     except pd.errors.EmptyDataError:
+#         print(f"파일이 비어있습니다: {file_path}")
+#         return None
+#     except pd.errors.ParserError:
+#         print(f"파일을 파싱하는 데 실패했습니다: {file_path}")
+#         return None
+#     except Exception as e:
+#         print(f"데이터를 불러오는데 실패했습니다: {e}")
+#         return None
 
 class TableDataGenerator:
     def __init__(self, abnormal_rate, length):
@@ -131,7 +132,6 @@ class TableDataGenerator:
 
     # Row-level Parallelization
     def save_batch_data_csv_row_parallel(self, batch_df, batch_number, out_directory):
-        batch_filename = f"{package_path}/data/processed/table/row_parallel_batch_{batch_number}.csv"
         
         dir_path = package_path + out_directory
         if not os.path.exists(dir_path):
@@ -147,7 +147,7 @@ class TableDataGenerator:
         domains, col_nms, data = zip(*batch_data)
         batch_df = pd.DataFrame({'domain': domains, 
                                  'col_nm': col_nms,
-                                 'data': data})
+                                 'col_values': data})
         batch_df.to_csv(batch_filename, index=False)
         end_time = time.time()
 
@@ -220,7 +220,7 @@ class TableDataGenerator:
               default= 1000,
               show_default=True)
 def main(source_data_path, output_data_path, abnormal_rate, length):
-    df = load_excel_data(source_data_path)
+    df = load_excel(source_data_path)
     processor = TableDataGenerator(abnormal_rate, length)
     processor.save_full_data_parquet_row_parallel(df, batch_size =50, out_directory=output_data_path)
 

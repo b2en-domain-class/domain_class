@@ -17,24 +17,7 @@ package_path = os.getenv('PACKAGE_PATH')
 # package_path = '/home/dwna/projects/domain_class'
 sys.path.append(package_path)
 from src.features.build_features import BuildFeatures
-
-def load_excel_data(file_path):
-    file_path = package_path + file_path
-    try:
-        data = pd.read_excel(file_path)
-        return data
-    except FileNotFoundError:
-        print(f"파일을 찾을 수 없습니다: {file_path}")
-        return None
-    except pd.errors.EmptyDataError:
-        print(f"파일이 비어있습니다: {file_path}")
-        return None
-    except pd.errors.ParserError:
-        print(f"파일을 파싱하는 데 실패했습니다: {file_path}")
-        return None
-    except Exception as e:
-        print(f"데이터를 불러오는데 실패했습니다: {e}")
-        return None
+from src.util.files import write_csv, load_excel
 
 
 def is_korean_char(ch):
@@ -181,12 +164,12 @@ def profile_data_dask(df: pd.DataFrame, abnormal_rate: float, length: int, numbe
 
     return result
 
-def to_csv_with_directory(df, file_path):
-    file_path = package_path + file_path
-    directory = os.path.dirname(file_path)
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    df.to_csv(file_path, index=False)
+# def write_csv(df, file_path):
+#     file_path = package_path + file_path
+#     directory = os.path.dirname(file_path)
+#     if not os.path.exists(directory):
+#         os.makedirs(directory)
+#     df.to_csv(file_path, index=False)
 
 
 # profiles = profile_data(df, abnormal_rate=0.01, length=1000)
@@ -201,18 +184,18 @@ def to_csv_with_directory(df, file_path):
               show_default=True)
 def main(source_data_path:str, output_data_path:str ):
     # load data
-    df = load_excel_data(source_data_path)
+    df = load_excel(source_data_path)
     # generate and profile
     profiles_job = profile_data_joblib(df, abnormal_rate=0.01, length=1000)
     # data split into a train set and a test set
     train_df, test_df = train_test_split(profiles_job, test_size=0.1, random_state=42)
     # profiles for training
-    to_csv_with_directory(train_df,  output_data_path)
+    write_csv(train_df,  output_data_path)
     # profiles for testing
     parts = output_data_path.split('/')
     parts.insert(5, 'test')
     test_data_path = '/'.join(parts)
-    to_csv_with_directory(test_df,  test_data_path)
+    write_csv(test_df,  test_data_path)
     
 if __name__ == "__main__":
     main()

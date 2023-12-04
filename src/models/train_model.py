@@ -19,6 +19,7 @@ import warnings
 # warnings.filterwarnings('ignore')
 
 from src.features.build_features import BuildFeatures
+from src.util.files import load_csv
 
 import numpy as np
 from sklearn.model_selection import train_test_split, cross_val_score
@@ -39,23 +40,23 @@ import mlflow.sklearn
 mlflow.set_tracking_uri(f"http://localhost:5000")  
 mlflow.set_experiment("hyperParemeterOpted")  # Replace with your experiment name
 
-def load_data(file_path):
-    file_path = package_path + file_path
-    try:
-        data = pd.read_csv(file_path)
-        return data
-    except FileNotFoundError:
-        print(f"파일을 찾을 수 없습니다: {file_path}")
-        return None
-    except pd.errors.EmptyDataError:
-        print(f"파일이 비어있습니다: {file_path}")
-        return None
-    except pd.errors.ParserError:
-        print(f"파일을 파싱하는 데 실패했습니다: {file_path}")
-        return None
-    except Exception as e:
-        print(f"데이터를 불러오는데 실패했습니다: {e}")
-        return None
+# def load_csv(file_path):
+#     file_path = package_path + file_path
+#     try:
+#         data = pd.read_csv(file_path)
+#         return data
+#     except FileNotFoundError:
+#         print(f"파일을 찾을 수 없습니다: {file_path}")
+#         return None
+#     except pd.errors.EmptyDataError:
+#         print(f"파일이 비어있습니다: {file_path}")
+#         return None
+#     except pd.errors.ParserError:
+#         print(f"파일을 파싱하는 데 실패했습니다: {file_path}")
+#         return None
+#     except Exception as e:
+#         print(f"데이터를 불러오는데 실패했습니다: {e}")
+#         return None
 
 # Update the create_model function
 def create_model(model_name, params):
@@ -165,7 +166,7 @@ def main(model_name:str, params:str, train_data_path:str):
         raise ValueError("params must be a valid JSON string.")
     
     # Load train data
-    data = load_data(train_data_path)
+    data = load_csv(train_data_path)
     data = data.dropna()
     # Split data into features and target
     X = data.drop(columns=['col_name', 'datatype', 'domain' ])
@@ -175,7 +176,7 @@ def main(model_name:str, params:str, train_data_path:str):
     parts = train_data_path.split('/')
     parts.insert(5, 'test')
     test_data_path = '/'.join(parts)
-    test_data = load_data(test_data_path)
+    test_data = load_csv(test_data_path)
     test_data = test_data.dropna()
     # Split data into features and target
     X_test = test_data.drop(columns=['col_name', 'datatype', 'domain' ])
