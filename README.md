@@ -18,18 +18,21 @@
 1. **MLflow 추적 서버 설정**: 
    ```bash
    mlflow server --backend-store-uri sqlite:////var/mlflow/mlflow.db --default-artifact-root /path/to/artifacts --host 0.0.0.0 --port 5000
-2. **훈련데이터 생성**:
+2. **컬럼 데이터셋 생성**:
+   ```bash
+   python -m rawdata_generation --source_data_path xxx  --output_data_path xxx  --abnormal_rate 0.01 --length 1000
+3. **훈련데이터 생성**:
    ```bash
    python -m make_trainingdataset --source_data_path '/source.xlsx' --ouptput_data_path '/1/train.csv'
-3. **하이퍼파라미터 최적화**:
+4. **하이퍼파라미터 최적화**:
    ```bash
-   python -m hype_opt model_name train_data_path
-4. **모델 훈련**:
+   python -m hype_opt --model_name xxx --train_data_path xxx
+5. **모델 훈련**:
    ```bash
-   python -m train_model model_name params train_data_path
-5. **모델 적용**:
+   python -m train_model --model_name xxx --params xxx --train_data_path xxx
+6. **모델 적용**:
    ```bash
-   python -m domain_estimate model file.csv
+   python -m domain_estimate --model_name xxx --stage Production --data_path xxx
 
 
 ## 결과 및 시각화
@@ -69,7 +72,8 @@ Project Organization
         ├── __init__.py    <- Makes src a Python module
         │
         ├── data           <- Scripts to generate data
-        │   └── make_train_dataset.py
+        │   ├── make_train_dataset.py
+        │   └── rawdata_generation.py
         │
         ├── features       <- Scripts to turn raw data into features for modeling
         │   └── build_features.py
