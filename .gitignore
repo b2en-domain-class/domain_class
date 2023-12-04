@@ -9,6 +9,8 @@ __pycache__/
 .Python
 .venv/
 data/raw/
+data/processed/
+data/interim/
 env/
 build/
 develop-eggs/
