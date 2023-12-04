@@ -1,0 +1,14 @@
+aliases: []
+creation_timestamp: 1701404066335
+current_stage: Production
+description: ''
+last_updated_timestamp: 1701416821820
+name: cat_best
+run_id: 4ff18060236843c7b0515aba33b0b39d
+run_link: ''
+source: file:///home/dwna/projects/domain_class/models/216902294232963657/4ff18060236843c7b0515aba33b0b39d/artifacts/model
+status: READY
+status_message: null
+storage_location: file:///home/dwna/projects/domain_class/models/216902294232963657/4ff18060236843c7b0515aba33b0b39d/artifacts/model
+user_id: null
+version: 1

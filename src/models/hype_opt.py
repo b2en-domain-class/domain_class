@@ -80,6 +80,8 @@ def create_model(model_name, params):
 
 
 def load_data(file_path):
+    file_path = package_path + file_path 
+
     try:
         data = pd.read_csv(file_path)
         return data
@@ -100,13 +102,13 @@ def load_data(file_path):
 @click.command()
 @click.option('--model_name', prompt='Enter the model name (e.g., logistic_regression, random_forest, svm, lgbm, catboost)',
               help='Name of the model.')
-@click.option('--train_data_path', prompt='Now enter the training data path (e.g., /1/ver_1_len_1000_rate_0.01.csv)',
-              default='/1/ver_1_len_1000_rate_0.01.csv',
-              help='training data relative path',
+@click.option('--train_data_path', prompt='Now enter the training data path',
+              default='/data/processed/profiles/2/ver_2_len_1000_rate_0.01.csv',
+              help='training data relative path from package path',
               show_default=True)
 def main(model_name:str, train_data_path:str):
     # Load data
-    data = load_data(package_path + '/data/processed/profiles' + train_data_path)
+    data = load_data(train_data_path)
     data = data.dropna()
     # Split data into features and target
     X = data.drop(columns=['col_name', 'datatype', 'domain' ])
@@ -172,3 +174,10 @@ if __name__ == "__main__":
 # Best parameters for svm: {"C": 3.4646160593658917, "gamma": 1.45111800508685, "preprocessing": "standard"}
 # Best parameters for lgbm: {"learning_rate": 0.0937282043841488, "max_depth": 10, "n_estimators": 50, "num_leaves": 15, "preprocessing": "standard"}
 # Best parameters for catboost: {"depth": 10, "iterations": 100, "learning_rate": 0.29681845674147794, "preprocessing": "minmax"}
+
+
+# Best parameters for lgbm: {"learning_rate": 0.17528711814661266, "max_depth": 5, "n_estimators": 50, "num_leaves": 127, "preprocessing": "minmax"}
+# Best parameters for catboost: {"depth": 10, "iterations": 100, "learning_rate": 0.233387197467268, "preprocessing": "standard"}
+# Best parameters for svm: {"C": 8.864809889251712, "gamma": 1.783460164495912, "preprocessing": "standard"}
+# Best parameters for logistic_regression: {"C": 50.55202347085015, "preprocessing": "minmax"}
+# Best parameters for random_forest: {"max_depth": 20, "n_estimators": 200, "preprocessing": "standard"}

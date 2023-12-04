@@ -36,10 +36,11 @@ import mlflow
 import mlflow.sklearn
 
 # Initialize MLflow tracking
-mlflow.set_tracking_uri(f"file://{package_path}/models")  
+mlflow.set_tracking_uri(f"http://localhost:5000")  
 mlflow.set_experiment("hyperParemeterOpted")  # Replace with your experiment name
 
 def load_data(file_path):
+    file_path = package_path + file_path
     try:
         data = pd.read_csv(file_path)
         return data
@@ -144,9 +145,9 @@ def log_dict_as_artifact(results_dict, artifact_path='model_metrics'):
               default={},
               help='JSON string of model parameters.',
               show_default=True)
-@click.option('--train_data_path', prompt='Now enter the training data path (e.g., /1/ver_1_len_1000_rate_0.01.csv)',
-              default='/1/ver_1_len_1000_rate_0.01.csv',
-              help='training data relative path',
+@click.option('--train_data_path', prompt='Now enter the training data path )',
+              default='/data/processed/profiles/2/ver_2_len_1000_rate_0.01.csv',
+              help='training data relative path from package path',
               show_default=True)
 def main(model_name:str, params:str, train_data_path:str):
     """
@@ -164,7 +165,7 @@ def main(model_name:str, params:str, train_data_path:str):
         raise ValueError("params must be a valid JSON string.")
     
     # Load train data
-    data = load_data(package_path + '/data/processed/profiles' + train_data_path)
+    data = load_data(train_data_path)
     data = data.dropna()
     # Split data into features and target
     X = data.drop(columns=['col_name', 'datatype', 'domain' ])
@@ -172,9 +173,9 @@ def main(model_name:str, params:str, train_data_path:str):
     
     # Load test data
     parts = train_data_path.split('/')
-    parts.insert(2, 'test')
+    parts.insert(5, 'test')
     test_data_path = '/'.join(parts)
-    test_data = load_data(package_path + '/data/processed/profiles' + test_data_path)
+    test_data = load_data(test_data_path)
     test_data = test_data.dropna()
     # Split data into features and target
     X_test = test_data.drop(columns=['col_name', 'datatype', 'domain' ])
