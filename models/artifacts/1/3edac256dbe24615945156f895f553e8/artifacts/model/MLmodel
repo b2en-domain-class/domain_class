@@ -13,7 +13,7 @@ flavors:
     pickled_model: model.pkl
     serialization_format: cloudpickle
     sklearn_version: 1.3.2
-mlflow_version: 2.8.1
+mlflow_version: 2.9.2
 model_size_bytes: 34893723
 model_uuid: 7a610d9d29444e01bb61603631aaa0b8
 run_id: 3edac256dbe24615945156f895f553e8
