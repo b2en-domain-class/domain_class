@@ -1,0 +1,14 @@
+aliases: []
+creation_timestamp: 1701665594806
+current_stage: Production
+description: ''
+last_updated_timestamp: 1701665612607
+name: lgbm_best
+run_id: 48f0f3d7440247279b3699af504e00f0
+run_link: ''
+source: file:///home/dwna/projects/domain_class/models/216902294232963657/48f0f3d7440247279b3699af504e00f0/artifacts/model
+status: READY
+status_message: null
+storage_location: file:///home/dwna/projects/domain_class/models/216902294232963657/48f0f3d7440247279b3699af504e00f0/artifacts/model
+user_id: null
+version: 1
